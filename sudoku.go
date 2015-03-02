@@ -11,31 +11,19 @@ import (
 const SUDOKU_SZ = 9
 const SUDOKU_BLK_SZ = 3
 
+type free_cell struct {
+	value *byte
+	row *uint16
+	col *uint16
+	block *uint16
+}
+
 type sudoku struct {
 	cells [SUDOKU_SZ * SUDOKU_SZ]byte
 	rows [SUDOKU_SZ]uint16
 	cols [SUDOKU_SZ]uint16
 	blocks [SUDOKU_SZ]uint16
 }
-
-var BOARD_1 = sudoku {
-	cells: [SUDOKU_SZ * SUDOKU_SZ]byte{
-    	0, 0, 0,  2, 6, 0,  7, 0, 1,  // 0
-    	6, 8, 0,  0, 7, 0,  0, 9, 0,  // 0
-    	1, 9, 0,  0, 0, 4,  5, 0, 0,  // 0
-    
-    	8, 2, 0,  1, 0, 0,  0, 4, 0,  // 3
-    	0, 0, 4,  6, 0, 2,  9, 0, 0,  // 3
-    	0, 5, 0,  0, 0, 3,  0, 2, 8,  // 3
-    
-    	0, 0, 9,  3, 0, 0,  0, 7, 4,  // 6
-    	0, 4, 0,  0, 5, 0,  0, 3, 6,  // 6
-    	7, 0, 3,  0, 1, 8,  0, 0, 0,  // 6
-    },
-    rows: [SUDOKU_SZ]uint16{ 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-    cols: [SUDOKU_SZ]uint16{ 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-    blocks: [SUDOKU_SZ]uint16{ 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-};
 
 func index(row, col int) int {
 	return col + SUDOKU_SZ * row
@@ -276,8 +264,6 @@ func (board *sudoku) String() string {
 }
 
 func main() {
-	//BOARD_1.init()
-	//BOARD_1.solve()
 	problem := 0
 	solver := newSolver(1)
 	solver.start()
