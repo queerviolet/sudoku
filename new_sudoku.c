@@ -137,10 +137,6 @@ void sudoku_init(sudoku_t *board) {
   }
 }
 
-#define stack_push(stack, item) (((stack)->top++) = (item))
-#define stack_pop(stack) (--(stack)->top)
-#define stack_is_empty(stack) ((stack)->top == (stack)->bottom)
-
 cell_t * sudoku_next_unsolved(sudoku_t *board) {
   size_t best_pos = -1;
   cell_t * best_cell = NULL;
@@ -163,6 +159,8 @@ typedef struct {
 } guess_t;
 
 size_t sudoku_solve(sudoku_t *board, size_t max_solutions) {
+  sudoku_init(board);
+
   size_t solutions = 0;
 
   guess_t stack[SUDOKU_SZ * SUDOKU_SZ];
@@ -246,11 +244,10 @@ int main(int argc,  char **argv) {
   int puzzle = 1;
   sudoku_t board;
   while (sudoku_read(&board)) {
-    sudoku_init(&board);
     printf("===== Puzzle %d: =====\n", puzzle++);
     sudoku_print(&board);
     printf("*** Solutions:\n");
-    size_t solutions = sudoku_solve(&board, 1);
+    size_t solutions = sudoku_solve(&board, -1);
     printf("%zu solutions\n", solutions);
   }
   return 0;
