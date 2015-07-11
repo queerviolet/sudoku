@@ -8,8 +8,6 @@ too expensive, but it turns out to be tremendously worth it, since we detect pro
 constraint violations ASAP. An earlier version used a free cell queue which was sorted
 once at initilization. That version was about half the speed of this one.
 
-The `sudoku_solve` function should really take a block.
-
 The other solvers are in various states of disarray, alas.
 
 To try it:

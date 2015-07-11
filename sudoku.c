@@ -158,7 +158,8 @@ typedef struct {
   uint8_t guess;
 } guess_t;
 
-size_t sudoku_solve(sudoku_t *board, size_t max_solutions) {
+size_t sudoku_solve(sudoku_t *board,
+  size_t max_solutions, void (^on_found)(sudoku_t*)) {
   sudoku_init(board);
 
   size_t solutions = 0;
@@ -191,7 +192,7 @@ size_t sudoku_solve(sudoku_t *board, size_t max_solutions) {
     if (top->guess <= SUDOKU_SZ) {
       cell_set(top->cell, top->guess);
       if (board->num_unsolved == 1) {
-        sudoku_print(board);
+        on_found(board);
         ++solutions;
       } else {
         cell_t *next = sudoku_next_unsolved(board);
@@ -240,14 +241,16 @@ int sudoku_read(sudoku_t *board) {
   return 1;
 }
 
-int main(int argc,  char **argv) {
+int main(int argc, char **argv) {
   int puzzle = 1;
   sudoku_t board;
   while (sudoku_read(&board)) {
     printf("===== Puzzle %d: =====\n", puzzle++);
     sudoku_print(&board);
     printf("*** Solutions:\n");
-    size_t solutions = sudoku_solve(&board, -1);
+    size_t solutions = sudoku_solve(&board, -1, ^(sudoku_t *board) {
+      sudoku_print(board);
+    });
     printf("%zu solutions\n", solutions);
   }
   return 0;
