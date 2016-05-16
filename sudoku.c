@@ -2,6 +2,7 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdbool.h>
 
 #define SUDOKU_BLK_SZ 3
 #define SUDOKU_SZ (SUDOKU_BLK_SZ * SUDOKU_BLK_SZ)
@@ -28,7 +29,7 @@ typedef struct {
   uint8_t possibilities;
 } cell_t;
 
-#define cell_taken(cell) (*((cell).row) | *((cell).col) | *((cell).block))
+#define cell_taken(cell) ( *(cell)->row | *(cell)->col | *(cell)->block )
 #define cell_valid(cell, sym) (!set_has(cell_taken(cell), sym))
 
 // doesn't check validity
@@ -56,6 +57,24 @@ uint8_t cell_num_possible(cell_t *cell) {
     if (!set_has(taken, sym)) ++possibilities;
   }
   return (cell->possibilities = possibilities);
+}
+
+int cell_deduce(cell_t *cell) {
+  uint16_t taken = cell_taken(cell);
+  uint8_t possibilities = 0;
+  uint8_t possibility = 0;
+  for (uint8_t sym = 1; sym <= SUDOKU_SZ; ++sym) {
+    if (!set_has(taken, sym)) {
+      ++possibilities;
+      possibility = sym;
+    }
+  }
+  cell->possibilities = possibilities;
+  if (possibilities == 1) {
+    cell_set(cell, possibility);
+    return possibility;
+  }
+  return -1;
 }
 
 typedef struct {
@@ -122,12 +141,12 @@ void sudoku_init(sudoku_t *board) {
       };
       // printf("*(cell.value)=%d\n", *(cell.value));
       if (sym != 0) {
-        if (!cell_valid(cell, sym)) {
+        if (!cell_valid(&cell, sym)) {
           printf("failed at: row:%zu, col:%zu, sym:%u\n",
             row, col, sym);
           sudoku_print(board);
         }
-        assert(cell_valid(cell, sym));
+        assert(cell_valid(&cell, sym));
         cell_set(&cell, sym);
       } else {
         // empty space
@@ -164,6 +183,32 @@ size_t sudoku_solve(sudoku_t *board,
 
   size_t solutions = 0;
 
+  /*
+
+  Leaving this here as an interesting note:
+
+  I thought this might speed up the code, but I think the main loop
+  already does almost exactly this.
+
+  bool shaved = false;
+  do {
+    shaved = false;
+    for (cell_t *c = board->unsolved; c != board->unsolved_end; ++c) {
+      if (*c->value) continue;
+      int deduced_value = cell_deduce(c);
+      if (deduced_value != -1) {
+        printf("deduced: %d\n", deduced_value);
+        --board->num_unsolved;
+        shaved = true;
+      }
+    }
+  } while(shaved);
+
+  I think it would also be fun to restructure the main loop as a continuous
+  scan over the unsolved queue, with the behavior of the scan depending on
+  the state of the queue.
+  */
+
   guess_t stack[SUDOKU_SZ * SUDOKU_SZ];
   guess_t *top = stack;
 
@@ -174,7 +219,7 @@ size_t sudoku_solve(sudoku_t *board,
   }
   *top = (guess_t) {
     .cell = first,
-    .taken = cell_taken(*first),
+    .taken = cell_taken(first),
     .guess = 0
   };
 
@@ -200,7 +245,7 @@ size_t sudoku_solve(sudoku_t *board,
           --board->num_unsolved;
           *(++top) = (guess_t) {
             .cell = next,
-            .taken = cell_taken(*next),
+            .taken = cell_taken(next),
             .guess = 0
           };
         }
@@ -248,7 +293,7 @@ int main(int argc, char **argv) {
     printf("===== Puzzle %d: =====\n", puzzle++);
     sudoku_print(&board);
     printf("*** Solutions:\n");
-    size_t solutions = sudoku_solve(&board, -1, ^(sudoku_t *board) {
+    size_t solutions = sudoku_solve(&board, 1, ^(sudoku_t *board) {
       sudoku_print(board);
     });
     printf("%zu solutions\n", solutions);
