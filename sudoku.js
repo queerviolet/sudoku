@@ -8,8 +8,8 @@ var Sudoku = function(size) {
   if (blockSize !== Math.floor(blockSize))
     throw new Error('size != some x^2')
 
-
   var board = new Uint8Array(size * size);
+  
   var taken = {
     rows: new Uint16Array(size),
     cols: new Uint16Array(size),
@@ -70,7 +70,7 @@ var Sudoku = function(size) {
 
   var solve = function(emitter) {
     unsolved.sort(function(a, b) {
-      b.possible.length - a.possible.length;
+      b.possible - a.possible;
     });
     var emitter = emitter || new EventEmitter();
     emitter.stats = {
@@ -95,9 +95,7 @@ var Sudoku = function(size) {
       return;
     }
     var cell = unsolved.shift();
-    var trial = cell.possible.length;
-    while (--trial >= 0) {
-      var sym = cell.possible[trial];
+    for (let sym = 1; sym <= size; ++sym) {
       ++emitter.stats.checks;
       if (cell.check(sym)) {
         cell.set(sym);
@@ -105,7 +103,7 @@ var Sudoku = function(size) {
         cell.clear();
       }
     }
-    unsolved.push(cell);
+    unsolved.unshift(cell);
   };
 
   var Solution = function(yourBoard) {
@@ -130,7 +128,7 @@ var Sudoku = function(size) {
 
   var bitsetToString = function(bits) {
     var set = [];
-    for (var sym = 0; sym < size; ++sym) {
+    for (let sym = 0; sym < size; ++sym) {
       if (1 & (bits >> sym)) {
         set.push(sym + 1);
       }
@@ -138,56 +136,55 @@ var Sudoku = function(size) {
     return '[' + set.join(', ') + ']';
   }
 
-  var Cell = function(index) {
-    this.index = index;
-    this.row = Math.floor(index / size);
-    this.col = index % size;
-    this.block = blockSize * Math.floor(this.row / blockSize) +
-        Math.floor(this.col / blockSize);
-    this.updatePossible();
-  };
-
-  Cell.prototype.toString = function() {
-    return 'cell at index:' + this.index +
-      ' row:' + this.row +
-      ' col:' + this.col +
-      ' block:' + this.block;
-  };
-
-  Cell.prototype.updatePossible = function() {
-    this.possible = [];
-    for (var sym = 1; sym <= size; ++sym) {
-      if (this.check(sym)) {
-        this.possible.push(sym);
-      }
+  class Cell {
+    constructor(index) {
+      this.index = index;
+      this.row = Math.floor(index / size);
+      this.col = index % size;
+      this.block = blockSize * Math.floor(this.row / blockSize) +
+        Math.floor(this.col / blockSize);      
     }
-  };
 
-  Cell.prototype.check = function(symbol) {
-    var mask = taken.rows[this.row] |
-      taken.cols[this.col] |
-      taken.blocks[this.block];
-    //console.log('mask for', this.toString(), bitsetToString(mask));
-    return !(1 & (mask >> (symbol - 1)));
-  };
+    get possible() {
+      let possible = 0
+      for (let sym = 1; sym <= size; ++sym) {
+        this.check(sym) && ++possible
+      }
+      return possible
+    }
 
-  Cell.prototype.set = function(symbol) {
-    //console.log('set', this.toString(), symbol);
-    var mask = 1 << (symbol - 1);
-    taken.rows[this.row] |= mask;
-    taken.cols[this.col] |= mask;
-    taken.blocks[this.block] |= mask;
-    board[this.index] = symbol;
-  };
+    toString() {
+      return `cell at index: ${this.index} ` +
+        ` row: ${this.row} ` +
+        ` col: ${this.col} ` +
+        ` block: ${this.block}`
+    }
 
-  Cell.prototype.clear = function() {
-    var symbol = board[this.index];
-    board[this.index] = 0;
-    var mask = ~(1 << (symbol - 1));
-    taken.rows[this.row] &= mask;
-    taken.cols[this.col] &= mask;
-    taken.blocks[this.block] &= mask;
-  };
+    check(symbol) {
+      var mask = taken.rows[this.row] |
+          taken.cols[this.col] |
+          taken.blocks[this.block];
+      //console.log('mask for', this.toString(), bitsetToString(mask));
+      return !(1 & (mask >> (symbol - 1)));
+    }
+
+    set(symbol) {
+      var mask = 1 << (symbol - 1);
+      taken.rows[this.row] |= mask;
+      taken.cols[this.col] |= mask;
+      taken.blocks[this.block] |= mask;
+      board[this.index] = symbol;
+    }
+
+    clear() {
+      var symbol = board[this.index];
+      board[this.index] = 0;
+      var mask = ~(1 << (symbol - 1));
+      taken.rows[this.row] &= mask;
+      taken.cols[this.col] &= mask;
+      taken.blocks[this.block] &= mask;
+    }
+  }
 
   var solver = {
     solve: solve,
